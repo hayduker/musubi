@@ -20,6 +20,12 @@ class IMAPCreds:
 
 
 class ProtonClient:
+    '''
+    A client for ProtonMail's IMAP API.
+    Requires protonmail-bridge process to be running on the system and for 
+    the credentials to be up-to-date. See https://pychao.com/2020/06/10/update-on-using-protonmail-bridge-on-headless-wordpress-linux-servers/
+    for more details on starting the bridge.
+    '''
     def __init__(self):
         creds = IMAPCreds()
         self._client = IMAPClient(creds.host, creds.port, ssl=False)
