@@ -1,8 +1,5 @@
 from imapclient import IMAPClient
-from tqdm import tqdm
 import os
-
-from trainer import Trainer
 
 
 class IMAPCreds:
@@ -22,25 +19,28 @@ class IMAPCreds:
                     return line.split('=')[1].strip().strip('"')
 
 
+class ProtonClient:
+    def __init__(self):
+        creds = IMAPCreds()
+        self._client = IMAPClient(creds.host, creds.port, ssl=False)
+        self._client.login(creds.username, creds.password)
 
+    def __enter__(self):
+        self._client.__enter__()
+        return self
 
-model_trainer = Trainer()
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._client.__exit__(exc_type, exc_val, exc_tb)
 
-imap_creds = IMAPCreds()
+    def find_messages(self, folder):
+        select_info = self._client.select_folder(folder)
+        print(f"Found {select_info[b'EXISTS']} messages in '{folder}'...")
+        return self._client.search('ALL')
 
-with IMAPClient(host=imap_creds.host, port=imap_creds.port, ssl=False) as client:
-    client.login(imap_creds.username, imap_creds.password)
+    def get_message_text(self, message_id):
+        fetched = self._client.fetch(message_id, ['RFC822'])
+        text_bytes = fetched[message_id][b'RFC822']
+        return text_bytes.decode()
 
-    folder = 'Folders/Bad Truth'
-    select_info = client.select_folder(folder)
-    print(f"{select_info[b'EXISTS']} messages in {folder}")
-    
-    messages = client.search('ALL')
-
-    for msgid, data in client.fetch(messages, ['RFC822']).items():
-        rfc822 = data[b'RFC822']
-        print(f'Counting ID #{msgid}...')
-        model_trainer.update_counts(rfc822.decode(), is_good=False)
-
-    print(model_trainer.model.num_bad_emails)
-    print(model_trainer.model.bad_counts)
+    def close(self):
+        return self._client.logout()
