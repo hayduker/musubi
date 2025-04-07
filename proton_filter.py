@@ -1,40 +1,35 @@
 from imapclient import IMAPClient
+from tqdm import tqdm
+import os
 
 from trainer import Trainer
 
 
-def get_imap_variable(name):
-    if name in os.environ:
-        return os.environ[name]
-    
-    with open('.envrc', 'r') as f:
-        for line in f:
-            if line.startswith(f'export {name}='):
-                return line.split('=')[1].strip().strip('"')
+class IMAPCreds:
+    def __init__(self):
+        self.host = self._get_imap_variable('IMAP_HOST')
+        self.port = self._get_imap_variable('IMAP_PORT')
+        self.username = self._get_imap_variable('IMAP_USERNAME')
+        self.password = self._get_imap_variable('IMAP_PASSWORD')
 
-def get_imap_host():
-    return get_imap_variable('IMAP_HOST')
+    def _get_imap_variable(self, name):
+        if name in os.environ:
+            return os.environ[name]
+        
+        with open('.envrc', 'r') as f:
+            for line in f:
+                if line.startswith(f'export {name}='):
+                    return line.split('=')[1].strip().strip('"')
 
-def get_imap_port():
-    return int(get_imap_variable('IMAP_PORT'))
-
-def get_imap_username():
-    return get_imap_variable('IMAP_USERNAME')
-
-def get_imap_password():
-    return get_imap_variable('IMAP_PASSWORD')
 
 
 
 model_trainer = Trainer()
 
-imap_host = get_imap_host()
-imap_port = get_imap_port()
-imap_username = get_imap_username()
-imap_password = get_imap_password()
+imap_creds = IMAPCreds()
 
-with IMAPClient(host=get_imap_host(), port=get_imap_port(), ssl=False) as client:
-    client.login(get_imap_username(), get_imap_password())
+with IMAPClient(host=imap_creds.host, port=imap_creds.port, ssl=False) as client:
+    client.login(imap_creds.username, imap_creds.password)
 
     folder = 'Folders/Bad Truth'
     select_info = client.select_folder(folder)
